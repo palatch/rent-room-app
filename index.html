@@ -160,6 +160,16 @@
       padding: 4px 11px;
       font-size: .97rem;
     }
+    .edit-btn {
+      background: #f8d778;
+      color: #256434;
+      border: 1.1px solid #bae2c6;
+      border-radius: 8px;
+      padding: 4px 15px;
+      font-size: .97rem;
+      margin-left: 3px;
+      font-weight: 700;
+    }
     .tabbar {
       position: fixed;
       left: 0; right: 0; bottom: 0;
@@ -189,17 +199,38 @@
       box-shadow: 0 1px 4px #e6ffe855;
     }
     .tabbar-btn .icon { font-size: 1.16em; display: block;}
+    /* Edit form overlay */
+    .overlay {
+      position: fixed;
+      left: 0; top: 0; width: 100vw; height: 100vh;
+      background: rgba(0,0,0,.18);
+      z-index: 200;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .edit-form-box {
+      background: #fff;
+      border-radius: 17px;
+      box-shadow: 0 6px 30px #26764a42;
+      padding: 24px 20px;
+      min-width: 260px;
+      max-width: 92vw;
+      max-height: 95vh;
+      overflow-y: auto;
+    }
+    .edit-form-box label { font-weight: 500; color: #26764a;}
     @media (max-width: 700px) {
       .main { padding: 8px 2vw 23px 2vw; margin-top: 8px;}
       .appbar { font-size: 1.06rem; padding: 10px 0 3px 65px; min-height: 54px;}
       table, th, td { font-size: 0.96rem;}
       .appbar .yak-logo { width: 36px; height: 36px;}
+      .edit-form-box { padding: 14px 6vw; }
     }
   </style>
 </head>
 <body>
   <div class="appbar">
-    <!-- โลโก้ยักษ์วัดโพธิ์ SVG -->
     <span class="yak-logo">
       <svg viewBox="0 0 64 64" fill="none">
         <ellipse cx="32" cy="32" rx="30" ry="28" fill="#35823d" stroke="#d7c77d" stroke-width="3"/>
@@ -218,7 +249,6 @@
         <ellipse cx="32" cy="58" rx="9" ry="2.3" fill="#d7c77d" opacity="0.85"/>
         <rect x="25.2" y="16" width="13.5" height="5" rx="2.2" fill="#d7c77d" stroke="#49782f" stroke-width="0.9"/>
         <ellipse cx="32" cy="16" rx="2.2" ry="1.5" fill="#35823d"/>
-        <!-- เขี้ยว มินิมอล -->
         <rect x="27.1" y="44" width="1.6" height="3" rx="0.6" fill="#fff" stroke="#e53935" stroke-width="0.6"/>
         <rect x="35.3" y="44" width="1.6" height="3" rx="0.6" fill="#fff" stroke="#e53935" stroke-width="0.6"/>
       </svg>
@@ -233,6 +263,7 @@
     <button class="tabbar-btn" id="tab-summary" onclick="renderSummary()"><span class="icon">📊</span>สรุป</button>
     <button class="tabbar-btn" id="tab-settings" onclick="renderSettings()"><span class="icon">⚙️</span>ตั้งค่า</button>
   </div>
+  <div id="overlay" style="display:none"></div>
   <script>
     // LocalStorage Keys
     const LS_ROOMS = "rooms_rentapp_thai";
@@ -322,6 +353,7 @@
               <svg viewBox="0 0 32 32" width="32" height="32"><ellipse cx="16" cy="16" rx="14" ry="13" fill="#35823d" stroke="#d7c77d" stroke-width="1.3"/><ellipse cx="16" cy="19.5" rx="7.2" ry="3.8" fill="#fff7e0"/><ellipse cx="11.6" cy="16" rx="1.7" ry="2" fill="#fff" stroke="#49782f" stroke-width="0.5"/><ellipse cx="20.4" cy="16" rx="1.7" ry="2" fill="#fff" stroke="#49782f" stroke-width="0.5"/><ellipse cx="11.6" cy="16" rx="0.6" ry="0.8" fill="#35823d"/><ellipse cx="20.4" cy="16" rx="0.6" ry="0.8" fill="#35823d"/><rect x="10.4" y="20" width="11" height="1.7" rx="0.7" fill="#ffc970" stroke="#49782f" stroke-width="0.3"/><ellipse cx="16" cy="23" rx="2.7" ry="0.9" fill="#fff" stroke="#e53935" stroke-width="0.4"/><ellipse cx="13.2" cy="23" rx="0.5" ry="0.4" fill="#e53935"/><ellipse cx="18.8" cy="23" rx="0.5" ry="0.4" fill="#e53935"/><path d="M6.6 13 Q16 7 25.4 13" stroke="#d7c77d" stroke-width="0.8" fill="none"/><ellipse cx="9.4" cy="13" rx="0.9" ry="0.7" fill="#e53935"/><ellipse cx="22.6" cy="13" rx="0.9" ry="0.7" fill="#e53935"/><ellipse cx="16" cy="28.5" rx="4" ry="0.9" fill="#d7c77d" opacity="0.85"/><rect x="12" y="9" width="8" height="2.1" rx="0.9" fill="#d7c77d" stroke="#49782f" stroke-width="0.3"/><ellipse cx="16" cy="9" rx="1" ry="0.7" fill="#35823d"/><rect x="13" y="21" width="0.7" height="1.5" rx="0.4" fill="#fff" stroke="#e53935" stroke-width="0.2"/><rect x="18.3" y="21" width="0.7" height="1.5" rx="0.4" fill="#fff" stroke="#e53935" stroke-width="0.2"/></svg>
             </span>
             ${r.roomNo} | ${r.address}
+            <button class="edit-btn" onclick="editRoom(${idx})">แก้ไขห้อง</button>
             <button class="del-btn" onclick="delRoom(${idx})">ลบ</button>
           </div>
           ${expireMsg}
@@ -490,6 +522,54 @@
       renderRooms();
     }
 
+    // --- แก้ไขห้อง
+    function editRoom(idx) {
+      let r = rooms[idx];
+      let html = `
+        <div class="overlay" style="z-index:9999;" onclick="closeOverlay(event)">
+          <div class="edit-form-box" onclick="event.stopPropagation()">
+            <h3 style="color:#26764a;">แก้ไขรายละเอียดห้อง</h3>
+            <form id="editRoomForm">
+              <div><label>หมายเลขห้อง *</label>
+              <input class="input" name="roomNo" required maxlength="20" value="${r.roomNo||''}"></div>
+              <div><label>บ้านเลขที่ *</label>
+              <input class="input" name="address" required maxlength="40" value="${r.address||''}"></div>
+              <div><label>วันที่เริ่มต้นสัญญา *</label>
+              <input class="input" type="date" name="startDate" required value="${r.startDate||''}"></div>
+              <div><label>วันที่สิ้นสุดสัญญา *</label>
+              <input class="input" type="date" name="endDate" required value="${r.endDate||''}"></div>
+              <div><label>ค่าเช่าต่อเดือน (บาท) *</label>
+              <input class="input" type="number" name="rent" required min="1" value="${r.rent||''}"></div>
+              <div><label>วันที่ครบกำหนดชำระ (ตัวเลขวันที่ 1-31) *</label>
+              <input class="input" type="number" name="dueDate" min="1" max="31" required value="${r.dueDate||''}"></div>
+              <div><label>เงินประกัน (บาท)</label>
+              <input class="input" type="number" name="deposit" min="0" value="${r.deposit||''}"></div>
+              <div style="text-align:right;margin-top:18px;">
+                <button type="submit">บันทึกการแก้ไข</button>
+                <button type="button" onclick="closeOverlay()">ยกเลิก</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+      let overlay = document.getElementById("overlay");
+      overlay.innerHTML = html;
+      overlay.style.display = "";
+      document.getElementById('editRoomForm').onsubmit = function(e){
+        e.preventDefault();
+        let fd = new FormData(this);
+        Object.assign(rooms[idx], Object.fromEntries(fd.entries()));
+        localStorage.setItem(LS_ROOMS, JSON.stringify(rooms));
+        closeOverlay();
+        renderRooms();
+      }
+    }
+    function closeOverlay(e){
+      if(e && e.target!==document.getElementById("overlay")) return;
+      document.getElementById("overlay").style.display="none";
+      document.getElementById("overlay").innerHTML = "";
+    }
+
     // ------------------- สรุป
     function renderSummary(){
       setTab("tab-summary");
@@ -529,8 +609,12 @@
       document.getElementById("main").innerHTML = `
         <h2 style="color:#26764a;">⚙️ ตั้งค่า</h2>
         <button style="background:#fff7f7;color:#e53935;" onclick="if(confirm('ยืนยันลบข้อมูลทั้งหมด?')) resetAll()">ล้างข้อมูลทั้งหมด</button>
+        <button onclick="exportData()">สำรองข้อมูล (Export .json)</button>
+        <input id="importFile" type="file" accept=".json" style="display:none" onchange="importData(event)">
+        <button onclick="document.getElementById('importFile').click()">นำเข้าข้อมูล (Import .json)</button>
         <div style="font-size:0.99em;margin-top:12px;">
-          ข้อมูลเก็บไว้เฉพาะในอุปกรณ์นี้เท่านั้น (localStorage)
+          ข้อมูลเก็บไว้เฉพาะในอุปกรณ์นี้เท่านั้น (localStorage)<br>
+          สำรอง/คืนค่าข้อมูลได้ด้วย Export/Import
         </div>
       `;
     }
@@ -539,6 +623,39 @@
       localStorage.setItem(LS_ROOMS, JSON.stringify(rooms));
       localStorage.setItem(LS_LOGIN, "false");
       renderHome();
+    }
+
+    // Export/Import
+    function exportData(){
+      const data = JSON.stringify(rooms, null, 2);
+      const blob = new Blob([data], {type: 'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const d = new Date();
+      a.href = url;
+      a.download = `rent-backup-${d.getFullYear()}-${("0"+(d.getMonth()+1)).slice(-2)}-${("0"+d.getDate()).slice(-2)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(()=>{ document.body.removeChild(a); URL.revokeObjectURL(url); }, 50);
+    }
+    function importData(ev){
+      const file = ev.target.files[0];
+      if(!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e){
+        try {
+          const data = JSON.parse(e.target.result);
+          if(Array.isArray(data)){
+            rooms = data;
+            localStorage.setItem(LS_ROOMS, JSON.stringify(rooms));
+            alert("นำเข้าข้อมูลสำเร็จ!");
+            renderRooms();
+          } else throw new Error();
+        } catch{
+          alert("ไฟล์ไม่ถูกต้อง หรือนำเข้าไม่ได้");
+        }
+      }
+      reader.readAsText(file, "utf-8");
     }
 
     // ------------------- Utils
